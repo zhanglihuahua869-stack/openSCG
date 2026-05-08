@@ -3,23 +3,30 @@ FROM node:20-alpine AS builder
 
 WORKDIR /app
 
+RUN corepack enable
+
 # In staging context, we are at the root of openscg_app
-COPY package*.json ./
+COPY package.json pnpm-lock.yaml ./
 
 # Install all dependencies (including dev)
-RUN npm install
+ENV PUPPETEER_SKIP_DOWNLOAD="true"
+ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD="true"
+ENV CI="true"
+RUN pnpm install --frozen-lockfile --reporter=append-only
 
 # Copy source and public folder
 COPY . .
 
 # Build Next.js with NO_REDIS flag to avoid connection errors during static generation
 ENV NO_REDIS="true"
-RUN npm run build
+RUN pnpm run build
 
 # Stage 2: Production
 FROM node:20-alpine AS runner
 
 WORKDIR /app
+
+RUN corepack enable
 
 ENV NODE_ENV=production
 # Next.js 15 listens on 3000 by default, Cloud Run provides PORT.
@@ -29,12 +36,16 @@ ENV HOSTNAME="0.0.0.0"
 # Copy build artifacts and necessary files from builder
 COPY --from=builder /app/.next ./.next
 COPY --from=builder /app/public ./public
-COPY --from=builder /app/package*.json ./
+COPY --from=builder /app/package.json ./
+COPY --from=builder /app/pnpm-lock.yaml ./
 COPY --from=builder /app/server.js ./
-COPY --from=builder /app/next.config.ts ./
+COPY --from=builder /app/next.config.mjs ./
 # We need node_modules for server.js to run (socket.io etc)
 # Using production-only install in runner to minimize image size
-RUN npm install --omit=dev
+ENV PUPPETEER_SKIP_DOWNLOAD="true"
+ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD="true"
+ENV CI="true"
+RUN pnpm install --prod --frozen-lockfile --reporter=append-only
 
 EXPOSE 3000
 

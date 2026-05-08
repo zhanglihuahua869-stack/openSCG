@@ -13,7 +13,8 @@ export const useScgSocket = (sessionId?: string, onData?: (data: ScgTuple[]) => 
         const socket = io(typeof window !== 'undefined' ? window.location.origin : '', {
             path: '/api/socket',
             query: { sessionId },
-            transports: ['websocket', 'polling'], // Fallback to polling if websocket fails
+            // 临时强制走 polling，用于验证反向代理的 WebSocket 升级是否有问题
+            transports: ['polling'],
             reconnectionAttempts: 5,
             reconnectionDelay: 1000,
         });

@@ -13,3 +13,11 @@
 - 新增 `openscg_app/pnpm-lock.yaml`，让镜像构建基于 lockfile 执行确定性安装
 - 保留 `PUPPETEER_SKIP_DOWNLOAD` 与 `PUPPETEER_SKIP_CHROMIUM_DOWNLOAD`，减少 Puppeteer 对 Docker 构建耗时的影响
 - 移除 `src/app/layout.tsx` 中对 `next/font/google` 的 `Geist` 在线字体依赖，避免 Docker 构建阶段因外网字体请求失败而中断
+
+## v0.0.3 (2026-05-08 14:20)
+
+### fix: 迁移 pnpm 11 的 Docker 构建白名单配置
+
+- 在 `openscg_app/package.json` 中新增 `packageManager` 固定 `pnpm@11.0.8`，并移除已废弃的 `pnpm.onlyBuiltDependencies`
+- 新增 `openscg_app/pnpm-workspace.yaml`，通过 `allowBuilds` 显式放行 `esbuild`、`puppeteer`、`sharp`、`unrs-resolver`
+- 更新 `openscg_app/Dockerfile`，在镜像安装依赖前复制 `pnpm-workspace.yaml`，并在构建命令中关闭运行前依赖自检，避免再次触发 ignored builds 校验
